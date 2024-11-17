@@ -2,8 +2,10 @@
 import { SQSHandler } from "aws-lambda";
 import {
     GetObjectCommand,
+    PutObjectCommandInput,
     GetObjectCommandInput,
     S3Client,
+    PutObjectCommand,
 } from "@aws-sdk/client-s3";
 
 const s3 = new S3Client();
@@ -12,12 +14,13 @@ export const handler: SQSHandler = async (event) => {
     console.log("Event ", JSON.stringify(event));
 
     for (const record of event.Records) {
-        const recordBody = JSON.parse(record.body);
+        const recordBody = JSON.parse(record.body);        // Parse SQS message
+        const snsMessage = JSON.parse(recordBody.Message); // Parse SNS message
 
-        if (recordBody.Records) {
-            console.log("Record body ", JSON.stringify(recordBody));
+        if (snsMessage.Records) {
+            console.log("Record body ", JSON.stringify(snsMessage));
 
-            for (const messageRecord of recordBody.Records) {
+            for (const messageRecord of snsMessage.Records) {
                 const s3e = messageRecord.s3;
                 const srcBucket = s3e.bucket.name;
 
