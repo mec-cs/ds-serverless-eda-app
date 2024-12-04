@@ -1,0 +1,1 @@
+It is a bad formatted file to be uploaded in S3 bucket.

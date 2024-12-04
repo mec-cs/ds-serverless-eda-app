@@ -59,7 +59,7 @@ export class EDAAppStack extends cdk.Stack {
     const imgProcQueue = new sqs.Queue(this, "ImageProcessQueue", {
       deadLetterQueue: {
         queue: deadLetterQueue,
-        maxReceiveCount: 3,
+        maxReceiveCount: 1,
       },
     });
 
