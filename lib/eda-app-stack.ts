@@ -146,7 +146,7 @@ export class EDAAppStack extends cdk.Stack {
     imageDynamoDbTable.grantFullAccess(logImageFn);
 
     // Mail IAM Policy for both Mail Lambda fns
-    const mailPolicyStatement: iam.PolicyStatement = {
+    const mailPolicyStatement = new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
       actions: [
         "ses:SendEmail",
@@ -154,7 +154,7 @@ export class EDAAppStack extends cdk.Stack {
         "ses:SendTemplatedEmail",
       ],
       resources: ["*"],
-    } as iam.PolicyStatement;
+    })
 
     rejectMailerFn.addToRolePolicy(mailPolicyStatement);
 
