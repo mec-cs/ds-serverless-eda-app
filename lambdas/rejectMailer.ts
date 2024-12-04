@@ -1,0 +1,1 @@
+// Reject Mailer Lambda Function Content
