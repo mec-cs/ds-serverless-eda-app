@@ -66,32 +66,62 @@ export class EDAAppStack extends cdk.Stack {
 
     // Lambda functions
 
-    const confirmMailerFn = new lambdanode.NodejsFunction(this, "ConfirmMailerFn", {
+    const commonProps = {
       runtime: lambda.Runtime.NODEJS_18_X,
       memorySize: 1024,
       timeout: cdk.Duration.seconds(15),
+    } as cdk.aws_lambda_nodejs.NodejsFunctionProps;
+
+    const confirmMailerFn = new lambdanode.NodejsFunction(this, "ConfirmMailerFn", {
+      ...commonProps,
       entry: `${__dirname}/../lambdas/confirmMailer.ts`,
     });
 
     const logImageFn = new lambdanode.NodejsFunction(this, "LogImageFn", {
-      runtime: lambda.Runtime.NODEJS_18_X,
+      ...commonProps,
       entry: `${__dirname}/../lambdas/logImage.ts`,
-      timeout: cdk.Duration.seconds(15),
-      memorySize: 128,
       environment: {
         TABLE_NAME: imageDynamoDbTable.tableName,
       },
     });
 
     const rejectMailerFn = new lambdanode.NodejsFunction(this, "RejectMailerFn", {
-      runtime: lambda.Runtime.NODEJS_18_X,
-      memorySize: 1024,
-      timeout: cdk.Duration.seconds(15),
+      ...commonProps,
       entry: `${__dirname}/../lambdas/rejectMailer.ts`,
     });
 
+    const updateTableFn = new lambdanode.NodejsFunction(this, "UpdateTableFn", {
+      ...commonProps,
+      entry: `${__dirname}/../lambdas/updateTable.ts`,
+      environment: {
+        TABLE_NAME: imageDynamoDbTable.tableName,
+      },
+    });
 
-    // SQS --> Lambda
+    // Subscriptions
+
+    // filter mechanisms applied to subscriptions
+    // // only Caption-Date-Photographer metadata types are allowed
+    const subFilterPolicy: cdk.aws_sns_subscriptions.LambdaSubscriptionProps = {
+      metadata_type: sns.SubscriptionFilter.stringFilter({
+        allowlist: ["Caption", "Date", "Photographer"],
+      }),
+    } as cdk.aws_sns_subscriptions.LambdaSubscriptionProps;
+
+    s3ImageTopic.addSubscription(
+      new subs.LambdaSubscription(confirmMailerFn, subFilterPolicy)
+    );
+
+    s3ImageTopic.addSubscription(
+      new subs.SqsSubscription(imgProcQueue, subFilterPolicy),
+    );
+
+    s3ImageTopic.addSubscription(
+      new subs.LambdaSubscription(updateTableFn, subFilterPolicy),
+    );
+
+
+    // SQS --> Lambda, Event sources
 
     const imgProcEventSource = new events.SqsEventSource(imgProcQueue, {
       batchSize: 5,
@@ -102,17 +132,6 @@ export class EDAAppStack extends cdk.Stack {
       batchSize: 5,
       maxBatchingWindow: cdk.Duration.seconds(5),
     });
-
-
-    // Later on filter mechanisms will be added
-
-    s3ImageTopic.addSubscription(
-      new subs.LambdaSubscription(confirmMailerFn)
-    );
-
-    s3ImageTopic.addSubscription(
-      new subs.SqsSubscription(imgProcQueue)
-    );
 
 
     // Event sources
@@ -126,29 +145,20 @@ export class EDAAppStack extends cdk.Stack {
 
     imageDynamoDbTable.grantFullAccess(logImageFn);
 
-    rejectMailerFn.addToRolePolicy(
-      new iam.PolicyStatement({
-        effect: iam.Effect.ALLOW,
-        actions: [
-          "ses:SendEmail",
-          "ses:SendRawEmail",
-          "ses:SendTemplatedEmail",
-        ],
-        resources: ["*"],
-      })
-    );
+    // Mail IAM Policy for both Mail Lambda fns
+    const mailPolicyStatement: iam.PolicyStatement = {
+      effect: iam.Effect.ALLOW,
+      actions: [
+        "ses:SendEmail",
+        "ses:SendRawEmail",
+        "ses:SendTemplatedEmail",
+      ],
+      resources: ["*"],
+    } as iam.PolicyStatement;
 
-    confirmMailerFn.addToRolePolicy(
-      new iam.PolicyStatement({
-        effect: iam.Effect.ALLOW,
-        actions: [
-          "ses:SendEmail",
-          "ses:SendRawEmail",
-          "ses:SendTemplatedEmail",
-        ],
-        resources: ["*"],
-      })
-    );
+    rejectMailerFn.addToRolePolicy(mailPolicyStatement);
+
+    confirmMailerFn.addToRolePolicy(mailPolicyStatement);
 
 
     new cdk.CfnOutput(this, "bucketName", {
