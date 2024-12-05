@@ -77,7 +77,7 @@ function sendEmailParams({ name, email, message }: MailParams) {
             },
             Subject: {
                 Charset: "UTF-8",
-                Data: `New image Upload`,
+                Data: `Invalid Image Upload Rejected`,
             },
         },
         Source: SES_EMAIL_FROM,

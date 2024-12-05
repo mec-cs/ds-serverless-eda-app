@@ -104,23 +104,11 @@ export class EDAAppStack extends cdk.Stack {
     // filter mechanisms applied to subscriptions
     // // only Caption-Date-Photographer metadata types are allowed
     s3ImageTopic.addSubscription(
-      new subs.LambdaSubscription(confirmMailerFn, {
-        filterPolicy: {
-          metadata_type: sns.SubscriptionFilter.stringFilter({
-            allowlist: ["Caption", "Date", "Photographer"],
-          }),
-        }
-      })
+      new subs.LambdaSubscription(confirmMailerFn)
     );
 
     s3ImageTopic.addSubscription(
-      new subs.SqsSubscription(imgProcQueue, {
-        filterPolicy: {
-          metadata_type: sns.SubscriptionFilter.stringFilter({
-            allowlist: ["Caption", "Date", "Photographer"],
-          }),
-        }
-      }),
+      new subs.SqsSubscription(imgProcQueue)
     );
 
     s3ImageTopic.addSubscription(

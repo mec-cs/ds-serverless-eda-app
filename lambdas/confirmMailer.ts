@@ -83,7 +83,7 @@ function sendEmailParams({ name, email, message }: MailParams) {
             },
             Subject: {
                 Charset: "UTF-8",
-                Data: `New image Upload`,
+                Data: `Image Upload to S3 Bucket Approved`,
             },
         },
         Source: SES_EMAIL_FROM,

@@ -3,15 +3,7 @@
 import { SQSHandler } from "aws-lambda";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { PutCommand } from "@aws-sdk/lib-dynamodb";
-import {
-    GetObjectCommand,
-    PutObjectCommandInput,
-    GetObjectCommandInput,
-    S3Client,
-    PutObjectCommand,
-} from "@aws-sdk/client-s3";
 
-const s3 = new S3Client();
 const ddbDocClient = new DynamoDBClient({ region: process.env.REGION });
 
 export const handler: SQSHandler = async (event) => {
@@ -33,16 +25,8 @@ export const handler: SQSHandler = async (event) => {
 
                     // Object key may have spaces or unicode non-ASCII characters.
                     const srcKey = decodeURIComponent(s3e.object.key.replace(/\+/g, " "));
-                    let origimage = null;
 
                     try {
-                        // Download the image from the S3 source bucket.
-                        const params: GetObjectCommandInput = {
-                            Bucket: srcBucket,
-                            Key: srcKey,
-                        };
-                        origimage = await s3.send(new GetObjectCommand(params));
-                        // Process the image ......
                         // if image item not ends with .jpeg or .png extension
                         if (!srcKey.endsWith(".jpeg") && !srcKey.endsWith(".png")) {
                             console.log(`Invalid Image Type: ${srcKey}`)
@@ -51,20 +35,25 @@ export const handler: SQSHandler = async (event) => {
                             const putImgOutput = await ddbDocClient.send(
                                 new PutCommand({
                                     TableName: process.env.TABLE_NAME,
-                                    Item: { fileName: srcKey },
+                                    Item: {
+                                        fileName: srcKey
+                                    },
                                 })
                             );
 
-                            console.log("Successfull Put Image: ", srcKey);
+                            console.log("Put Image Status Code: ", putImgOutput.$metadata.httpStatusCode);
+                            console.log("Successfull Put Image to bucket: ", srcBucket, "/", srcKey);
                         }
                     }
                     catch (error) {
                         console.log("Error, ", error);
+                        throw new Error(`Put Error: ${error}`);
                     }
                 }
             }
         } catch (error: any) {
             console.log("Error, ", error);
+            throw new Error(`Error: ${error}`);
         }
     }
 };
