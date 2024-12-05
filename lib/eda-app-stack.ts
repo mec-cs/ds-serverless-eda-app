@@ -98,26 +98,39 @@ export class EDAAppStack extends cdk.Stack {
       },
     });
 
+
     // Subscriptions
 
     // filter mechanisms applied to subscriptions
     // // only Caption-Date-Photographer metadata types are allowed
-    const subFilterPolicy: cdk.aws_sns_subscriptions.LambdaSubscriptionProps = {
-      metadata_type: sns.SubscriptionFilter.stringFilter({
-        allowlist: ["Caption", "Date", "Photographer"],
+    s3ImageTopic.addSubscription(
+      new subs.LambdaSubscription(confirmMailerFn, {
+        filterPolicy: {
+          metadata_type: sns.SubscriptionFilter.stringFilter({
+            allowlist: ["Caption", "Date", "Photographer"],
+          }),
+        }
+      })
+    );
+
+    s3ImageTopic.addSubscription(
+      new subs.SqsSubscription(imgProcQueue, {
+        filterPolicy: {
+          metadata_type: sns.SubscriptionFilter.stringFilter({
+            allowlist: ["Caption", "Date", "Photographer"],
+          }),
+        }
       }),
-    } as cdk.aws_sns_subscriptions.LambdaSubscriptionProps;
-
-    s3ImageTopic.addSubscription(
-      new subs.LambdaSubscription(confirmMailerFn, subFilterPolicy)
     );
 
     s3ImageTopic.addSubscription(
-      new subs.SqsSubscription(imgProcQueue, subFilterPolicy),
-    );
-
-    s3ImageTopic.addSubscription(
-      new subs.LambdaSubscription(updateTableFn, subFilterPolicy),
+      new subs.LambdaSubscription(updateTableFn, {
+        filterPolicy: {
+          metadata_type: sns.SubscriptionFilter.stringFilter({
+            allowlist: ["Caption", "Date", "Photographer"],
+          }),
+        }
+      }),
     );
 
 
@@ -145,6 +158,7 @@ export class EDAAppStack extends cdk.Stack {
 
     // Permissions & Policies
 
+    s3ImageBucket.grantRead(logImageFn);
     imageDynamoDbTable.grantFullAccess(logImageFn);
     imageDynamoDbTable.grantFullAccess(updateTableFn);
 

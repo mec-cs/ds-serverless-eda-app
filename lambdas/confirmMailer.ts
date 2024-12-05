@@ -28,30 +28,37 @@ export const handler: SNSHandler = async (event) => {
 
     for (const record of event.Records) {
         try {
-            const message = JSON.parse(record.Sns.Message);
-            const s3Object = message.Records[0].s3;
+            const snsMessage = JSON.parse(record.Sns.Message); // Parse SNS message
 
-            const bucketName = s3Object.bucket.name;
-            const itemId = s3Object.object.key;
+            if (snsMessage.Records) {
+                console.log("Record body ", JSON.stringify(snsMessage));
 
-            console.log(`Bucket Name: ${bucketName}`);
-            console.log(`Item ID: ${itemId}`);
+                for (const messageRecord of snsMessage.Records) {
+                    const s3e = messageRecord.s3;
 
-            if (bucketName && itemId) {
+                    const srcBucket = s3e.bucket.name;
+                    // Object key may have spaces or unicode non-ASCII characters.
+                    const srcKey = decodeURIComponent(s3e.object.key.replace(/\+/g, " "));
 
-                const emailParams: MailParams = {
-                    name: "S3 Bucket Image Upload",
-                    email: SES_EMAIL_FROM,
-                    message: `
-                            Your image file upload has been approved to the AWS S3 Bucket, 
-                            The file is in s3://${bucketName}/${itemId} .
-                        `,
+
+                    console.log(`Bucket Name: ${srcBucket}`);
+                    console.log(`Item ID: ${srcKey}`);
+
+                    if (srcBucket && srcKey) {
+                        const emailParams: MailParams = {
+                            name: "S3 Bucket Image Upload",
+                            email: SES_EMAIL_FROM,
+                            message: `
+                                    Your image file upload has been approved to the AWS S3 Bucket, 
+                                    The file is in s3://${srcBucket}/${srcKey} .
+                                `,
+                        }
+
+                        const formattedEmailParams = sendEmailParams(emailParams);
+                        await sesClient.send(new SendEmailCommand(formattedEmailParams));
+                    }
                 }
-
-                const formattedEmailParams = sendEmailParams(emailParams);
-                await sesClient.send(new SendEmailCommand(formattedEmailParams));
             }
-
         } catch (error: any) {
             console.log("Error: ", error);
         }
