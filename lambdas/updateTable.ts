@@ -10,11 +10,33 @@ export const handler: SNSHandler = async (event) => {
     console.log("Event", JSON.stringify(event));
 
     for (const record of event.Records) {
+        try {
+            const message = JSON.parse(record.Sns.Message);
+            const metadataType = record.Sns.MessageAttributes.metadata_type.Value;
 
-        const message = JSON.parse(record.Sns.Message);
-        const parsedMessage = JSON.stringify(message);
+            // console.log(`SNS Incoming message: ${parsedMessage}`);
 
-        console.log(`SNS Incoming message: ${message}`);
+            const { id, value } = message || undefined;
+
+            if (id && value && metadataType) {
+
+                const updateTableOuput = await ddbDocClient.send(
+                    new UpdateCommand({
+                        TableName: process.env.TABLE_NAME,
+                        Key: {
+                            fileName: id,
+                        },
+                        UpdateExpression: `SET ${metadataType} = :value`,
+                        ExpressionAttributeValues: {
+                            ":value": value,
+                        },
+                    })
+                );
+
+                console.log(`Update Metadata, Item ID: ${id} , Process Status Code: ${updateTableOuput.$metadata.httpStatusCode}`);
+            }
+        } catch (error: any) {
+            console.log("Error: ", error);
+        }
     }
-
 }

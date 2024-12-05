@@ -125,11 +125,13 @@ export class EDAAppStack extends cdk.Stack {
 
     const imgProcEventSource = new events.SqsEventSource(imgProcQueue, {
       batchSize: 5,
+      maxConcurrency: 3,
       maxBatchingWindow: cdk.Duration.seconds(5),
     });
 
     const dlqEventSource = new events.SqsEventSource(deadLetterQueue, {
       batchSize: 5,
+      maxConcurrency: 3,
       maxBatchingWindow: cdk.Duration.seconds(5),
     });
 
@@ -144,6 +146,7 @@ export class EDAAppStack extends cdk.Stack {
     // Permissions & Policies
 
     imageDynamoDbTable.grantFullAccess(logImageFn);
+    imageDynamoDbTable.grantFullAccess(updateTableFn);
 
     // Mail IAM Policy for both Mail Lambda fns
     const mailPolicyStatement = new iam.PolicyStatement({
@@ -165,5 +168,8 @@ export class EDAAppStack extends cdk.Stack {
       value: s3ImageBucket.bucketName,
     });
 
+    new cdk.CfnOutput(this, "TopicArn", {
+      value: s3ImageTopic.topicArn,
+    });
   }
 }
