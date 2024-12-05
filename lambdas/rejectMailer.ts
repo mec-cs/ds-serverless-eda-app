@@ -40,10 +40,10 @@ export const handler: SQSHandler = async (event: any) => {
 
                 try {
                     const emailParams: MailParams = {
-                        name: "S3 Bucket Image Upload Rejected",
+                        name: "AWS S3 Bucket & DynamoDB System",
                         email: SES_EMAIL_FROM,
                         message: `
-                            Your image file upload has been rejected, The file s3://${srcBucket}/${srcKey} 
+                            Your image file upload to DynamoDB has been rejected, The file s3://${srcBucket}/${srcKey} 
                             is not a valid image format. Valid formats are ".jpeg" or ".png" , please check 
                             your image file format before the upload.
                         `,
@@ -89,7 +89,7 @@ function getHtmlContent({ name, email, message }: MailParams) {
     return `
     <html>
       <body>
-        <h2>❌ S3 Bucket Image Upload Rejection</h2>
+        <h2>❌ S3 Bucket Image Upload to DynamoDB Rejected</h2>
         <p>Hello,</p>
         <p><strong>${message}</strong></p>
         <hr />
