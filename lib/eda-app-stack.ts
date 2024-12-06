@@ -35,18 +35,11 @@ export class EDAAppStack extends cdk.Stack {
     });
 
 
-    // S3 Bucket --> SQS
-
-    s3ImageBucket.addEventNotification(
-      s3.EventType.OBJECT_CREATED,
-      new s3n.SnsDestination(s3ImageTopic)
-    );
-
-
     // DynamoDB creation
 
     const imageDynamoDbTable = new dynamodb.Table(this, "ImageTable", {
       partitionKey: { name: "fileName", type: dynamodb.AttributeType.STRING },
+      stream: dynamodb.StreamViewType.NEW_IMAGE,
     });
 
 
@@ -99,6 +92,19 @@ export class EDAAppStack extends cdk.Stack {
     });
 
 
+    // S3 Bucket --> SQS
+
+    s3ImageBucket.addEventNotification(
+      s3.EventType.OBJECT_CREATED,
+      new s3n.SnsDestination(s3ImageTopic)
+    );
+
+    s3ImageBucket.addEventNotification(
+      s3.EventType.OBJECT_REMOVED,
+      new s3n.LambdaDestination(logImageFn)
+    );
+
+
     // Subscriptions
 
     // filter mechanisms applied to subscriptions
@@ -146,7 +152,6 @@ export class EDAAppStack extends cdk.Stack {
 
     // Permissions & Policies
 
-    s3ImageBucket.grantRead(logImageFn);
     imageDynamoDbTable.grantFullAccess(logImageFn);
     imageDynamoDbTable.grantFullAccess(updateTableFn);
 
