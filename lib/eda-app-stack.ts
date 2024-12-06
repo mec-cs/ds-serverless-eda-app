@@ -46,10 +46,11 @@ export class EDAAppStack extends cdk.Stack {
     // SQS queues, and DLQ
 
     const deadLetterQueue = new sqs.Queue(this, "imageDLQ", {
-      retentionPeriod: Duration.minutes(10),
+      receiveMessageWaitTime: cdk.Duration.seconds(10),
     });
 
     const imgProcQueue = new sqs.Queue(this, "ImageProcessQueue", {
+      receiveMessageWaitTime: cdk.Duration.seconds(10),
       deadLetterQueue: {
         queue: deadLetterQueue,
         maxReceiveCount: 3,
@@ -129,13 +130,11 @@ export class EDAAppStack extends cdk.Stack {
 
     const imgProcEventSource = new events.SqsEventSource(imgProcQueue, {
       batchSize: 5,
-      maxConcurrency: 3,
       maxBatchingWindow: cdk.Duration.seconds(5),
     });
 
     const dlqEventSource = new events.SqsEventSource(deadLetterQueue, {
       batchSize: 5,
-      maxConcurrency: 3,
       maxBatchingWindow: cdk.Duration.seconds(5),
     });
 

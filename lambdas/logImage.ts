@@ -11,25 +11,26 @@ export const handler: SQSHandler = async (event) => {
 
     for (const record of event.Records) {
         try {
-            // Parse the SQS message according to the Events
-            const recordBody = record.body ? JSON.parse(record.body) : record;
+            const recordBody = JSON.parse(record.body); // Parse SQS message
+            const snsMessage = JSON.parse(recordBody.Message); // Parse SNS message
 
-            if (recordBody.Message) {
-                // ObjectCreated:Put logic
-                const snsMessage = JSON.parse(recordBody.Message); // Parse the SNS message
+            if (snsMessage.Message) {
                 console.log("Parsed SNS Message: ", JSON.stringify(snsMessage));
 
                 for (const messageRecord of snsMessage.Records) {
                     const s3e = messageRecord.s3;
                     const srcBucket = s3e.bucket.name;
+                    const msgEventName = messageRecord.eventName;
 
                     const srcKey = decodeURIComponent(s3e.object.key.replace(/\+/g, " "));
 
-                    if (messageRecord.eventName === "ObjectCreated:Put") {
-                        if (!srcKey.endsWith(".jpeg") && !srcKey.endsWith(".png")) {
-                            console.log(`Invalid Image Type: ${srcKey}`);
-                            throw new Error(`Invalid Image Type: ${srcKey}`);
-                        }
+                    if (!srcKey.endsWith(".jpeg") && !srcKey.endsWith(".png")) {
+                        console.log(`Invalid Image Type: ${srcKey}`);
+                        throw new Error(`Invalid Image Type: ${srcKey}`);
+                    }
+
+                    // ObjectCreated:Put logic
+                    if (msgEventName === "ObjectCreated:Put") {
 
                         const putImgOutput = await ddbDocClient.send(
                             new PutCommand({
@@ -40,30 +41,25 @@ export const handler: SQSHandler = async (event) => {
 
                         console.log("Put Image Status Code: ", putImgOutput.$metadata.httpStatusCode);
                         console.log("Put Image to bucket: ", srcBucket, "/", srcKey);
+
+                        // ObjectRemoved:Delete logic
+                    } else if (msgEventName === "ObjectRemoved:Delete") {
+
+                        const deleteImgOutput = await ddbDocClient.send(
+                            new DeleteCommand({
+                                TableName: process.env.TABLE_NAME,
+                                Key: { fileName: srcKey },
+                            })
+                        );
+
+                        console.log("Delete Image Status Code: ", deleteImgOutput.$metadata.httpStatusCode);
+                        console.log("Deleted Image from bucket: ", srcBucket, "/", srcKey);
                     }
                 }
-            } else {
-                // ObjectRemoved:Delete logic
-                const s3e = recordBody.s3;
-                const srcBucket = s3e.bucket.name;
-
-                const srcKey = decodeURIComponent(s3e.object.key.replace(/\+/g, " "));
-
-                if (recordBody.eventName === "ObjectRemoved:Delete") {
-                    const deleteImgOutput = await ddbDocClient.send(
-                        new DeleteCommand({
-                            TableName: process.env.TABLE_NAME,
-                            Key: { fileName: srcKey },
-                        })
-                    );
-
-                    console.log("Delete Image Status Code: ", deleteImgOutput.$metadata.httpStatusCode);
-                    console.log("Deleted Image from bucket: ", srcBucket, "/", srcKey);
-                }
-
             }
         } catch (error: any) {
             console.error("Error processing record: ", error);
+            throw new Error("Cannot process the file!");
         }
     }
 };

@@ -33,7 +33,7 @@ export const handler: DynamoDBStreamHandler = (event) => {
             if (ddbEventName && ddbEventName === "INSERT") {
                 console.log("New Event Processed: ", ddbEventName);
 
-                const key = record.dynamodb?.Keys;
+                const key = JSON.stringify(record.dynamodb?.Keys);
 
                 const emailParams: MailParams = {
                     name: "DynamoDB Image Table Upload",
