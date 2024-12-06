@@ -102,7 +102,7 @@ export class EDAAppStack extends cdk.Stack {
 
     s3ImageBucket.addEventNotification(
       s3.EventType.OBJECT_REMOVED,
-      new s3n.LambdaDestination(logImageFn)
+      new s3n.SnsDestination(s3ImageTopic)
     );
 
 
