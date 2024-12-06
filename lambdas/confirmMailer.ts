@@ -1,13 +1,13 @@
 // Confirm Mailer Lambda Function Content
 
-import { SNSHandler } from "aws-lambda";
+
+import type { DynamoDBStreamHandler } from "aws-lambda";
 import {
     SESClient,
     SendEmailCommand,
     SendEmailCommandInput,
 } from "@aws-sdk/client-ses";
 import { SES_EMAIL_FROM, SES_EMAIL_TO, SES_REGION } from "../env";
-import { S3ImportSource } from "aws-cdk-lib/aws-cloudfront";
 
 if (!SES_EMAIL_TO || !SES_EMAIL_FROM || !SES_REGION) {
     throw new Error(
@@ -23,44 +23,33 @@ type MailParams = {
     message: string;
 };
 
-export const handler: SNSHandler = async (event) => {
+export const handler: DynamoDBStreamHandler = (event) => {
     console.log("Event ", JSON.stringify(event));
 
     for (const record of event.Records) {
         try {
-            const snsMessage = JSON.parse(record.Sns.Message); // Parse SNS message
+            const ddbEventName = record.eventName;
 
-            if (snsMessage.Records) {
-                console.log("Record body ", JSON.stringify(snsMessage));
+            if (ddbEventName && ddbEventName === "INSERT") {
+                console.log("New Event Processed: ", ddbEventName);
 
-                for (const messageRecord of snsMessage.Records) {
-                    const s3e = messageRecord.s3;
+                const key = record.dynamodb?.Keys;
 
-                    const srcBucket = s3e.bucket.name;
-                    // Object key may have spaces or unicode non-ASCII characters.
-                    const srcKey = decodeURIComponent(s3e.object.key.replace(/\+/g, " "));
-
-
-                    console.log(`Bucket Name: ${srcBucket}`);
-                    console.log(`Item ID: ${srcKey}`);
-
-                    if (srcBucket && srcKey) {
-                        const emailParams: MailParams = {
-                            name: "S3 Bucket Image Upload",
-                            email: SES_EMAIL_FROM,
-                            message: `
-                                    Your image file upload has been approved to the AWS S3 Bucket, 
-                                    The file is in s3://${srcBucket}/${srcKey} .
-                                `,
-                        }
-
-                        const formattedEmailParams = sendEmailParams(emailParams);
-                        await sesClient.send(new SendEmailCommand(formattedEmailParams));
-                    }
+                const emailParams: MailParams = {
+                    name: "DynamoDB Image Table Upload",
+                    email: SES_EMAIL_FROM,
+                    message: `
+                                        Your image file upload to the DynamoDB Table has been successfull, 
+                                        The image file information is ${key} .
+                                    `,
                 }
+
+                const formattedEmailParams = sendEmailParams(emailParams);
+                sesClient.send(new SendEmailCommand(formattedEmailParams));
             }
+
         } catch (error: any) {
-            console.log("Error: ", error);
+            console.log("Error, ", error);
         }
     }
 };
@@ -83,7 +72,7 @@ function sendEmailParams({ name, email, message }: MailParams) {
             },
             Subject: {
                 Charset: "UTF-8",
-                Data: `Image Upload to S3 Bucket Approved`,
+                Data: `Image Upload to DynamoDatabase Table`,
             },
         },
         Source: SES_EMAIL_FROM,
@@ -95,7 +84,7 @@ function getHtmlContent({ name, email, message }: MailParams) {
     return `
     <html>
       <body>
-        <h2>✅ S3 Bucket Image Upload Approved</h2>
+        <h2>✅ DynamoDB Image Upload Approved</h2>
         <p>Hello,</p>
         <p><strong>${message}</strong></p>
         <hr />

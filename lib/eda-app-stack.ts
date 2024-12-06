@@ -52,7 +52,7 @@ export class EDAAppStack extends cdk.Stack {
     const imgProcQueue = new sqs.Queue(this, "ImageProcessQueue", {
       deadLetterQueue: {
         queue: deadLetterQueue,
-        maxReceiveCount: 1,
+        maxReceiveCount: 3,
       },
     });
 
@@ -109,9 +109,6 @@ export class EDAAppStack extends cdk.Stack {
 
     // filter mechanisms applied to subscriptions
     // // only Caption-Date-Photographer metadata types are allowed
-    s3ImageTopic.addSubscription(
-      new subs.LambdaSubscription(confirmMailerFn)
-    );
 
     s3ImageTopic.addSubscription(
       new subs.SqsSubscription(imgProcQueue)
@@ -142,6 +139,12 @@ export class EDAAppStack extends cdk.Stack {
       maxBatchingWindow: cdk.Duration.seconds(5),
     });
 
+    const imgDdbTableEventSource = new events.DynamoEventSource(imageDynamoDbTable, {
+      startingPosition: lambda.StartingPosition.LATEST,
+      batchSize: 5,
+      maxBatchingWindow: cdk.Duration.seconds(15),
+    });
+
 
     // Event sources
 
@@ -149,6 +152,7 @@ export class EDAAppStack extends cdk.Stack {
 
     rejectMailerFn.addEventSource(dlqEventSource);
 
+    confirmMailerFn.addEventSource(imgDdbTableEventSource);
 
     // Permissions & Policies
 
