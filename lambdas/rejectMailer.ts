@@ -43,8 +43,8 @@ export const handler: SQSHandler = async (event: any) => {
                         name: "AWS S3 Bucket & DynamoDB System",
                         email: SES_EMAIL_FROM,
                         message: `
-                            Your image file upload to DynamoDB has been rejected, The file s3://${srcBucket}/${srcKey} 
-                            is not a valid image format. Valid formats are ".jpeg" or ".png" , please check 
+                            Your image file upload to DynamoDB has been rejected, The file ${srcKey} is not a valid image format.  
+                            [S3 Bucket path ://${srcBucket}]. Valid formats are ".jpeg" or ".png" , please check 
                             your image file format before the upload.
                         `,
                     }

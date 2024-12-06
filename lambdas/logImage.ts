@@ -13,14 +13,15 @@ export const handler: SQSHandler = async (event) => {
         try {
             const recordBody = JSON.parse(record.body); // Parse SQS message
             const snsMessage = JSON.parse(recordBody.Message); // Parse SNS message
+            const snsS3Records = snsMessage.Records;
 
-            if (snsMessage.Message) {
+            if (snsS3Records) {
                 console.log("Parsed SNS Message: ", JSON.stringify(snsMessage));
 
-                for (const messageRecord of snsMessage.Records) {
-                    const s3e = messageRecord.s3;
+                for (const msgRecord of snsS3Records) {
+                    const s3e = msgRecord.s3;
                     const srcBucket = s3e.bucket.name;
-                    const msgEventName = messageRecord.eventName;
+                    const msgEventName = msgRecord.eventName;
 
                     const srcKey = decodeURIComponent(s3e.object.key.replace(/\+/g, " "));
 
