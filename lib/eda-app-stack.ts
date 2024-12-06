@@ -110,9 +110,18 @@ export class EDAAppStack extends cdk.Stack {
 
     // filter mechanisms applied to subscriptions
     // // only Caption-Date-Photographer metadata types are allowed
+    // // only ObjectRemoved:Delete and ObjectCreated:Put are allowed
 
     s3ImageTopic.addSubscription(
-      new subs.SqsSubscription(imgProcQueue)
+      new subs.SqsSubscription(imgProcQueue, {
+        filterPolicyWithMessageBody: {
+          Records: sns.FilterOrPolicy.policy({
+            eventName: sns.FilterOrPolicy.filter(sns.SubscriptionFilter.stringFilter({
+              allowlist: ["ObjectCreated:Put", "ObjectRemoved:Delete"],
+            })),
+          })
+        }
+      })
     );
 
     s3ImageTopic.addSubscription(
