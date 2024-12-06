@@ -2,7 +2,7 @@
 
 __Name:__ Mehmet Enes Cakir
 
-__YouTube Demo link__ -
+__YouTube Demo link__ https://youtu.be/rYObCV77d0E
 
 
 ### Phase 1.
@@ -23,5 +23,4 @@ __YouTube Demo link__ -
 + Confirmation Mailer - Fully implemented.
 + Process Image - Fully implemented.
 + Update Table - Fully implemented.
-+ 
-+
++ Log Image - Fully implemented.

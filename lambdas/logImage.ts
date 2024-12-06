@@ -41,7 +41,7 @@ export const handler: SQSHandler = async (event) => {
                         );
 
                         console.log("Put Image Status Code: ", putImgOutput.$metadata.httpStatusCode);
-                        console.log("Put Image to bucket: ", srcBucket, "/", srcKey);
+                        console.log("Put Image : ", srcKey);
 
                         // ObjectRemoved:Delete logic
                     } else if (msgEventName === "ObjectRemoved:Delete") {
@@ -54,7 +54,7 @@ export const handler: SQSHandler = async (event) => {
                         );
 
                         console.log("Delete Image Status Code: ", deleteImgOutput.$metadata.httpStatusCode);
-                        console.log("Deleted Image from bucket: ", srcBucket, "/", srcKey);
+                        console.log("Deleted Image", srcKey);
                     }
                 }
             }
